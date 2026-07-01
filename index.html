@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Хоррор-таймлайн киноклуба</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --bg: #0b0b0f;
+    --accent: #b3122a;
+    --accent2: #e8b923;
+    --text: #eae6e1;
+    --muted: #948e8a;
+    --card: #17171d;
+    --border: #2a2a33;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-image: radial-gradient(circle at 20% 0%, #1c0f12 0%, var(--bg) 45%);
+  }
+  header {
+    text-align: center;
+    padding: 48px 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 2.2em;
+    letter-spacing: 2px;
+    margin: 0 0 8px;
+    color: var(--accent2);
+    text-shadow: 0 0 18px rgba(179,18,42,0.5);
+    text-transform: uppercase;
+  }
+  header p {
+    color: var(--muted);
+    margin: 4px 0;
+    min-height: 1.2em;
+  }
+  .timeline {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 16px 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 46px;
+  }
+  .entry {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .date-badge {
+    font-size: 0.95em;
+    color: var(--accent2);
+    font-weight: 600;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-align: center;
+    position: relative;
+    padding-bottom: 10px;
+  }
+  .date-badge::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 2px;
+    background: var(--accent);
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 100%;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  }
+  .carousel {
+    position: relative;
+    width: 100%;
+    background: #000;
+    aspect-ratio: 5/4;
+    overflow: hidden;
+  }
+  .slides {
+    display: flex;
+    height: 100%;
+    transition: transform .35s ease;
+  }
+  .slide {
+    min-width: 100%;
+    height: 100%;
+  }
+  .slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .car-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1em;
+    line-height: 1;
+  }
+  .car-btn.prev { left: 10px; }
+  .car-btn.next { right: 10px; }
+  .car-btn:hover { background: var(--accent); }
+  .count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 0.78em;
+    padding: 3px 9px;
+    border-radius: 10px;
+  }
+  .dots {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    cursor: pointer;
+  }
+  .dot.active { background: var(--accent2); }
+  .carousel.no-poster {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: repeating-linear-gradient(135deg, #17171d, #17171d 10px, #1c1c22 10px, #1c1c22 20px);
+  }
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px;
+    text-align: center;
+  }
+  .ph-icon { font-size: 2.2em; opacity: 0.6; }
+  .ph-title { font-size: 1.15em; color: var(--text); font-weight: 600; }
+  .ph-note { font-size: 0.8em; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px;
+    font-size: 0.85em;
+  }
+  .status {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 20px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Хоррор-таймлайн киноклуба</h1>
+  <p id="subtitle">Загрузка…</p>
+</header>
+<div class="timeline" id="timeline">
+  <div class="status" id="status">Загружаем ленту из облака…</div>
+</div>
+<footer>Собрано автоматически из истории Telegram-чата &middot; данные из S3-бакета</footer>
+<script>
+const MANIFEST_URL = "https://storage.yandexcloud.net/horror-timeline/manifest.json";
+const ROMAN_MONTHS = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-');
+  return `${parseInt(d,10)}.${ROMAN_MONTHS[parseInt(m,10)]}.${y}`;
+}
+
+function buildCard(entry, baseUrl) {
+  const wrap = document.createElement('div');
+  wrap.className = 'entry';
+
+  const badge = document.createElement('div');
+  badge.className = 'date-badge';
+  badge.textContent = fmtDate(entry.event_date);
+  wrap.appendChild(badge);
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  if (!entry.files || entry.files.length === 0) {
+    card.innerHTML = `
+      <div class="carousel no-poster">
+        <div class="placeholder">
+          <span class="ph-icon">&#127909;</span>
+          <span class="ph-title"></span>
+          <span class="ph-note">постер не найден</span>
+        </div>
+      </div>`;
+    card.querySelector('.ph-title').textContent = entry.title;
+    wrap.appendChild(card);
+    return wrap;
+  }
+
+  const count = entry.files.length;
+  const carousel = document.createElement('div');
+  carousel.className = 'carousel';
+  carousel.dataset.count = count;
+
+  const slidesDiv = document.createElement('div');
+  slidesDiv.className = 'slides';
+  entry.files.forEach((fname, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'slide' + (i === 0 ? ' active' : '');
+    const img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = baseUrl + 'posters/' + encodeURIComponent(entry.folder) + '/' + encodeURIComponent(fname);
+    slide.appendChild(img);
+    slidesDiv.appendChild(slide);
+  });
+  carousel.appendChild(slidesDiv);
+
+  if (count > 1) {
+    const prev = document.createElement('button');
+    prev.className = 'car-btn prev';
+    prev.innerHTML = '&#10094;';
+    const next = document.createElement('button');
+    next.className = 'car-btn next';
+    next.innerHTML = '&#10095;';
+    carousel.appendChild(prev);
+    carousel.appendChild(next);
+
+    const counter = document.createElement('div');
+    counter.className = 'count';
+    counter.textContent = `1/${count}`;
+    carousel.appendChild(counter);
+
+    const dots = document.createElement('div');
+    dots.className = 'dots';
+    for (let i = 0; i < count; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'dot' + (i === 0 ? ' active' : '');
+      dot.dataset.i = i;
+      dots.appendChild(dot);
+    }
+    carousel.appendChild(dots);
+
+    let idx = 0;
+    function show(i) {
+      idx = (i + count) % count;
+      slidesDiv.style.transform = 'translateX(-' + (idx * 100) + '%)';
+      dots.querySelectorAll('.dot').forEach((d, di) => d.classList.toggle('active', di === idx));
+      counter.textContent = `${idx + 1}/${count}`;
+    }
+    prev.addEventListener('click', () => show(idx - 1));
+    next.addEventListener('click', () => show(idx + 1));
+    dots.querySelectorAll('.dot').forEach(d => d.addEventListener('click', () => show(parseInt(d.dataset.i, 10))));
+  }
+
+  card.appendChild(carousel);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+async function main() {
+  const timelineEl = document.getElementById('timeline');
+  const subtitleEl = document.getElementById('subtitle');
+  try {
+    const resp = await fetch(MANIFEST_URL, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const manifest = await resp.json();
+    const entries = (manifest.entries || []).slice().sort((a, b) => a.event_date.localeCompare(b.event_date));
+    const baseUrl = manifest.base_url || MANIFEST_URL.replace('manifest.json', '');
+
+    timelineEl.innerHTML = '';
+    entries.forEach(entry => timelineEl.appendChild(buildCard(entry, baseUrl)));
+
+    const totalPosters = entries.reduce((n, e) => n + (e.files ? e.files.length : 0), 0);
+    const first = entries.length ? fmtDate(entries[0].event_date) : '';
+    const last = entries.length ? fmtDate(entries[entries.length - 1].event_date) : '';
+    subtitleEl.textContent = `${entries.length} показов · ${totalPosters} постеров · ${first} — ${last}`;
+  } catch (err) {
+    timelineEl.innerHTML = '<div class="status">Не удалось загрузить ленту: ' + err.message + '</div>';
+    subtitleEl.textContent = '';
+    console.error(err);
+  }
+}
+
+main();
+</script>
+</body>
+</html>
