@@ -117,6 +117,8 @@
     justify-content: center;
     padding: 24px;
     cursor: zoom-out;
+    touch-action: none;
+    overscroll-behavior: contain;
   }
   .lightbox.open {
     display: flex;
@@ -392,9 +394,11 @@ function openLightbox(images, index, onNavigate) {
   lightboxState.onNavigate = onNavigate || null;
   lightboxRender();
   document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 function closeLightbox() {
   document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 const lightboxEl = document.getElementById('lightbox');
@@ -417,9 +421,10 @@ lightboxEl.addEventListener('touchstart', (e) => {
   touchSwiped = false;
 }, { passive: true });
 lightboxEl.addEventListener('touchmove', (e) => {
+  e.preventDefault();
   const t = e.touches[0];
   if (Math.abs(t.clientX - touchStartX) > 10) touchSwiped = true;
-}, { passive: true });
+}, { passive: false });
 lightboxEl.addEventListener('touchend', (e) => {
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStartX;
