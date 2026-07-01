@@ -118,8 +118,11 @@
     justify-content: center;
     padding: 24px;
     cursor: zoom-out;
-    touch-action: none;
+    touch-action: pinch-zoom;
     overscroll-behavior: contain;
+  }
+  .lightbox img {
+    touch-action: pinch-zoom;
   }
   .lightbox.open {
     display: flex;
@@ -420,18 +423,25 @@ document.addEventListener('keydown', (e) => {
 
 // Swipe support for touch devices: swipe = navigate, tap = close (handled by the click listener above).
 let touchStartX = 0, touchStartY = 0, touchSwiped = false;
+let lightboxPinching = false;
 lightboxEl.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 1) { lightboxPinching = true; return; } // pinch-zoom: let the browser handle it
+  lightboxPinching = false;
   const t = e.touches[0];
   touchStartX = t.clientX;
   touchStartY = t.clientY;
   touchSwiped = false;
 }, { passive: true });
 lightboxEl.addEventListener('touchmove', (e) => {
-  e.preventDefault();
+  if (lightboxPinching || e.touches.length > 1) return;
   const t = e.touches[0];
-  if (Math.abs(t.clientX - touchStartX) > 10) touchSwiped = true;
+  if (Math.abs(t.clientX - touchStartX) > 10) {
+    touchSwiped = true;
+    e.preventDefault();
+  }
 }, { passive: false });
 lightboxEl.addEventListener('touchend', (e) => {
+  if (lightboxPinching) { if (e.touches.length === 0) lightboxPinching = false; return; }
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStartX;
   const dy = t.clientY - touchStartY;
