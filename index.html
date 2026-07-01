@@ -332,6 +332,31 @@ function buildCard(entry, baseUrl) {
     prev.addEventListener('click', () => show(idx - 1));
     next.addEventListener('click', () => show(idx + 1));
     dots.querySelectorAll('.dot').forEach(d => d.addEventListener('click', () => show(parseInt(d.dataset.i, 10))));
+
+    // Swipe support for touch devices: swipe = change slide, tap = open lightbox (handled by each img's click listener).
+    let touchStartX = 0, touchStartY = 0, touchSwiped = false;
+    slidesDiv.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchSwiped = false;
+    }, { passive: true });
+    slidesDiv.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - touchStartX) > 10) touchSwiped = true;
+    }, { passive: true });
+    slidesDiv.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0) show(idx + 1); else show(idx - 1);
+        touchSwiped = true; // suppress the click-to-zoom that follows
+      }
+    });
+    slidesDiv.addEventListener('click', (e) => {
+      if (touchSwiped) { e.stopImmediatePropagation(); touchSwiped = false; }
+    }, true);
   }
 
   card.appendChild(carousel);
