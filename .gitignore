@@ -1,0 +1,4 @@
+# Raw Telegram export (huge, and not needed — posters now live in S3)
+ChatExport_2026-07-01/
+# Local poster copies (source of truth is now s3://horror-timeline/posters/)
+posters/
