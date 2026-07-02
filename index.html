@@ -244,7 +244,8 @@
 </div>
 <div class="lightbox" id="lightbox"><span class="lightbox-close">&times;</span><button class="car-btn prev lightbox-nav" id="lightbox-prev">&#10094;</button><img id="lightbox-img" src="" alt=""><button class="car-btn next lightbox-nav" id="lightbox-next">&#10095;</button><div class="count lightbox-count" id="lightbox-count"></div></div>
 <script>
-const MANIFEST_URL = "https://storage.yandexcloud.net/horror-timeline/manifest.json";
+const BUCKET_URL = "https://storage.yandexcloud.net/horror-timeline/";
+const LIST_URL = BUCKET_URL + "?list-type=2&prefix=posters/&max-keys=1000";
 const ROMAN_MONTHS = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 
 function fmtDate(iso) {
@@ -423,18 +424,58 @@ lightboxEl.addEventListener('click', (e) => {
   if (touchSwiped) { e.stopImmediatePropagation(); touchSwiped = false; }
 }, true);
 
+async function listAllPosterKeys() {
+  // Reads the bucket's object listing directly (S3 ListObjectsV2 XML API), paginating via
+  // continuation tokens, and returns every key under posters/. No manifest.json involved —
+  // the page always reflects whatever's actually in the bucket right now.
+  const keys = [];
+  let url = LIST_URL;
+  while (true) {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const xml = new DOMParser().parseFromString(await resp.text(), 'application/xml');
+    if (xml.querySelector('parsererror')) throw new Error('bad XML from bucket listing');
+    xml.querySelectorAll('Contents > Key').forEach(el => keys.push(el.textContent));
+    const isTruncated = xml.querySelector('IsTruncated')?.textContent === 'true';
+    const token = xml.querySelector('NextContinuationToken')?.textContent;
+    if (!isTruncated || !token) break;
+    url = LIST_URL + '&continuation-token=' + encodeURIComponent(token);
+  }
+  return keys;
+}
+
+function buildEntriesFromKeys(keys) {
+  const prefix = 'posters/';
+  const folders = {};
+  keys.forEach(key => {
+    if (!key.startsWith(prefix)) return;
+    const rest = key.slice(prefix.length);
+    const slash = rest.indexOf('/');
+    if (slash === -1) return;
+    const folder = rest.slice(0, slash);
+    const filename = rest.slice(slash + 1);
+    (folders[folder] = folders[folder] || []).push(filename);
+  });
+
+  const entries = [];
+  Object.keys(folders).forEach(folder => {
+    const m = folder.match(/^(\d{4}-\d{2}-\d{2})\s*-\s*(.+)$/);
+    if (!m) return;
+    const files = folders[folder].filter(f => f && f !== '.keep').sort();
+    entries.push({ event_date: m[1], title: m[2], folder, files });
+  });
+  return entries;
+}
+
 async function main() {
   const timelineEl = document.getElementById('timeline');
   const subtitleEl = document.getElementById('subtitle');
   try {
-    const resp = await fetch(MANIFEST_URL, { cache: 'no-store' });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const manifest = await resp.json();
-    const entries = (manifest.entries || []).slice().sort((a, b) => a.event_date.localeCompare(b.event_date));
-    const baseUrl = manifest.base_url || MANIFEST_URL.replace('manifest.json', '');
+    const keys = await listAllPosterKeys();
+    const entries = buildEntriesFromKeys(keys).sort((a, b) => a.event_date.localeCompare(b.event_date));
 
     timelineEl.innerHTML = '';
-    entries.forEach(entry => timelineEl.appendChild(buildCard(entry, baseUrl)));
+    entries.forEach(entry => timelineEl.appendChild(buildCard(entry, BUCKET_URL)));
 
     const totalPosters = entries.reduce((n, e) => n + (e.files ? e.files.length : 0), 0);
     const first = entries.length ? fmtDate(entries[0].event_date) : '';
