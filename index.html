@@ -40,6 +40,16 @@
     margin: 4px 0;
     min-height: 1.2em;
   }
+  header p.credit {
+    font-size: 0.85em;
+  }
+  header p.credit a {
+    color: var(--accent2);
+    text-decoration: none;
+  }
+  header p.credit a:hover {
+    text-decoration: underline;
+  }
   .timeline {
     max-width: 780px;
     margin: 0 auto;
@@ -238,6 +248,7 @@
 <header>
   <h1>Таймлайн Ужасного марафона</h1>
   <p id="subtitle">Загрузка…</p>
+  <p class="credit">Постеры — Даня Удобный, <a href="https://t.me/udobnyi" target="_blank" rel="noopener">t.me/udobnyi</a> (кроме постера Alien)</p>
 </header>
 <div class="timeline" id="timeline">
   <div class="status" id="status">Загружаем ленту из облака…</div>
